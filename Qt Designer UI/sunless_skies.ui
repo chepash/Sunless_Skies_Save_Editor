@@ -47,9 +47,42 @@ QLineEdit[valid=true]{
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="pushButton_OpenGameSave">
+          <property name="toolTip">
+           <string>Find and open the most recently played save from the default Sunless Skies save folder</string>
+          </property>
+          <property name="text">
+           <string>Open Game Save</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="pushButton_Save">
+          <property name="toolTip">
+           <string>Save to the currently loaded file. If no file is loaded yet, shows a Save As dialog.</string>
+          </property>
           <property name="text">
            <string>Save</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_SaveAs">
+          <property name="toolTip">
+           <string>Save to a new file or location</string>
+          </property>
+          <property name="text">
+           <string>Save As...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_SaveStatus">
+          <property name="styleSheet">
+           <string notr="true">color: green; font-weight: bold;</string>
+          </property>
+          <property name="text">
+           <string/>
           </property>
          </widget>
         </item>
@@ -1438,6 +1471,70 @@ background: transparent;
             </item>
            </layout>
           </widget>
+          <widget class="QWidget" name="page_13">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>383</width>
+             <height>116</height>
+            </rect>
+           </property>
+           <attribute name="label">
+            <string>Soul Flaws</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_17">
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="checkBox_Poss_SoulFlaw_Flickering">
+              <property name="text">
+               <string>Soul Flaw: Flickering (Greed)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QCheckBox" name="checkBox_Poss_SoulFlaw_Clear">
+              <property name="text">
+               <string>Soul Flaw: Clear (Endurance)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QCheckBox" name="checkBox_Poss_SoulFlaw_Curdled">
+              <property name="text">
+               <string>Soul Flaw: Curdled (Envy)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QCheckBox" name="checkBox_Poss_SoulFlaw_Stained">
+              <property name="text">
+               <string>Soul Flaw: Stained (Excess)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QCheckBox" name="checkBox_Poss_SoulFlaw_Fermented">
+              <property name="text">
+               <string>Soul Flaw: Fermented (Deprivation)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QCheckBox" name="checkBox_Poss_SoulFlaw_Cold">
+              <property name="text">
+               <string>Soul Flaw: Cold (Ordeal)</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QCheckBox" name="checkBox_Poss_SoulFlaw_Lightless">
+              <property name="text">
+               <string>Soul Flaw: Lightless (Enlightenment)</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
           <widget class="QWidget" name="page_9">
            <property name="geometry">
             <rect>
@@ -2020,7 +2117,9 @@ background: transparent;
  </widget>
  <tabstops>
   <tabstop>pushButton_Open</tabstop>
+  <tabstop>pushButton_OpenGameSave</tabstop>
   <tabstop>pushButton_Save</tabstop>
+  <tabstop>pushButton_SaveAs</tabstop>
   <tabstop>pushButton_About</tabstop>
   <tabstop>tabWidget</tabstop>
   <tabstop>lineEdit_Lvl_Sovereigns</tabstop>
@@ -2097,6 +2196,13 @@ background: transparent;
   <tabstop>checkBox_Poss_Heirloom_Song</tabstop>
   <tabstop>checkBox_Poss_Heirloom_Cup</tabstop>
   <tabstop>checkBox_Poss_Heirloom_Secret</tabstop>
+  <tabstop>checkBox_Poss_SoulFlaw_Flickering</tabstop>
+  <tabstop>checkBox_Poss_SoulFlaw_Clear</tabstop>
+  <tabstop>checkBox_Poss_SoulFlaw_Curdled</tabstop>
+  <tabstop>checkBox_Poss_SoulFlaw_Stained</tabstop>
+  <tabstop>checkBox_Poss_SoulFlaw_Fermented</tabstop>
+  <tabstop>checkBox_Poss_SoulFlaw_Cold</tabstop>
+  <tabstop>checkBox_Poss_SoulFlaw_Lightless</tabstop>
   <tabstop>lineEdit_Poss_ReachMisc_Circus</tabstop>
   <tabstop>lineEdit_Poss_ReachMisc_StovepipePlate</tabstop>
   <tabstop>lineEdit_Poss_ReachMisc_Shard</tabstop>

@@ -28,14 +28,26 @@ def get_quality_value(save_file, val_id, key='Level'):
 
 
 def get_current_port_name(save_file):
-    region_id = save_file['GeneratedWorld']['CurrentRegionId']
-    port_id = save_file['GeneratedWorld']['CurrentPortId']
-    return PORTS[region_id]['Id'][port_id]['DisplayName']
+    generated_world = save_file['GeneratedWorld']
+    region_id = generated_world.get('CurrentRegionId')
+    port_id = generated_world.get('CurrentPortId')
+
+    region = PORTS.get(region_id)
+    if region is not None:
+        port = region['Id'].get(port_id)
+        if port is not None:
+            return port['DisplayName']
+
+    # Unknown/new location (e.g. added by a game update we don't have data
+    # for yet): fall back to the name the save itself carries rather than
+    # crashing the whole editor.
+    return generated_world.get('LocationName') or port_id or ''
 
 
 def get_current_region_name(save_file):
-    region_id = save_file['GeneratedWorld']['CurrentRegionId']
-    return PORTS[region_id]['Name']
+    region_id = save_file['GeneratedWorld'].get('CurrentRegionId')
+    region = PORTS.get(region_id)
+    return region['Name'] if region is not None else (region_id or '')
 
 
 def get_port_list(save_file, selected_region=''):
@@ -110,6 +122,12 @@ def get_heirloom(save_file, val_id):
     query = get_query(save_file, val_id)
 
     return True if query else False
+
+
+def get_soul_flaw(save_file, val_id):
+    query = get_query(save_file, val_id)
+
+    return True if query and 'EffectiveLevel' in query else False
 
 
 def write_query(save_file, query):
@@ -305,6 +323,37 @@ def write_heirlooms(save_file, state, val_id):
         for index, quality in enumerate(save_file['QualitiesPossessedList']):
             if quality['AssociatedQuality']['Id'] == val_id:
                 del save_file['QualitiesPossessedList'][index]
+
+    return save_file
+
+
+def write_soul_flaw(save_file, state, val_id):
+    query = get_query(save_file, val_id)
+
+    if state:
+        if query is None:
+            query = {
+                'Name': '',
+                'EffectiveLevel': 1,
+                'Level': 1,
+                'AssociatedQuality': {
+                    'Tag': '',
+                    'Id': val_id
+                }
+            }
+
+            save_file['QualitiesPossessedList'].append(query)
+        else:
+            query['EffectiveLevel'] = 1
+            query['Level'] = 1
+
+            save_file = write_query(save_file, query)
+    else:
+        if query is not None and 'Level' in query:
+            del query['EffectiveLevel']
+            del query['Level']
+
+            save_file = write_query(save_file, query)
 
     return save_file
 

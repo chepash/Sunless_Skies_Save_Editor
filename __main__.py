@@ -1,10 +1,13 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QDialog, QLineEdit, QTableWidgetItem, QHeaderView
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QMainWindow, QApplication, QFileDialog, QDialog, QLineEdit, QTableWidgetItem, QHeaderView, QMessageBox
+)
+from PyQt5.QtCore import Qt, QSettings, QCoreApplication, QTimer
 from PyQt5.QtGui import QBrush
 from Windows.main_window import Ui_MainWindow
 from Windows.about_window import Ui_AboutDialog
 from Windows.cargo_dialog import Ui_CargoDialog
 from Data.globals import *
+import os
 import sys
 import window_helper as wh
 import json_handler as jh
@@ -29,7 +32,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Button Events
         self.ui.pushButton_Open.clicked.connect(self.open_file_dialog)
-        self.ui.pushButton_Save.clicked.connect(self.save_file_dialog)
+        self.ui.pushButton_OpenGameSave.clicked.connect(self.open_game_save)
+        self.ui.pushButton_Save.clicked.connect(self.save_current_file)
+        self.ui.pushButton_SaveAs.clicked.connect(self.save_as_dialog)
         self.ui.pushButton_About.clicked.connect(self.open_about_window)
 
         # Stats/Line Edit Events
@@ -228,6 +233,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ui.checkBox_Poss_Heirloom_Wealth.stateChanged.connect(lambda: self.update_heirlooms(137376))
         self.ui.checkBox_Poss_Heirloom_Cup.stateChanged.connect(lambda: self.update_heirlooms(139484))
         self.ui.checkBox_Poss_Heirloom_Secret.stateChanged.connect(lambda: self.update_heirlooms(139160))
+        # Soul Flaws
+        self.ui.checkBox_Poss_SoulFlaw_Flickering.stateChanged.connect(lambda: self.update_soul_flaw(133340))
+        self.ui.checkBox_Poss_SoulFlaw_Clear.stateChanged.connect(lambda: self.update_soul_flaw(133341))
+        self.ui.checkBox_Poss_SoulFlaw_Curdled.stateChanged.connect(lambda: self.update_soul_flaw(133342))
+        self.ui.checkBox_Poss_SoulFlaw_Stained.stateChanged.connect(lambda: self.update_soul_flaw(133345))
+        self.ui.checkBox_Poss_SoulFlaw_Fermented.stateChanged.connect(lambda: self.update_soul_flaw(133346))
+        self.ui.checkBox_Poss_SoulFlaw_Cold.stateChanged.connect(lambda: self.update_soul_flaw(133347))
+        self.ui.checkBox_Poss_SoulFlaw_Lightless.stateChanged.connect(lambda: self.update_soul_flaw(133348))
         # Reach
         self.ui.lineEdit_Poss_ReachMisc_Circus.textChanged.connect(lambda: self.update_possessions(137036))
         self.ui.lineEdit_Poss_ReachMisc_StovepipePlate.textChanged.connect(lambda: self.update_possessions(133455))
@@ -263,22 +276,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ui.pushButton_Bank_Remove.clicked.connect(lambda: self.remove_cargo())
         self.ui.tableWidget_Bank.itemChanged.connect(lambda: self.update_cargo())
 
+        # Remember the last opened/saved file between sessions.
+        QCoreApplication.setOrganizationName('SunlessSkiesSaveEditor')
+        QCoreApplication.setApplicationName('SunlessSkiesSaveEditor')
+        self.settings = QSettings()
+
         self.show()
+        self.auto_load_last_save()
 
-    def open_file_dialog(self):
+    def auto_load_last_save(self):
+        # On startup, silently reopen the previously used save if it still
+        # exists; otherwise pre-select the freshest save found in the
+        # character repository so the user gets a useful starting path.
+        last_path = self.settings.value('lastSavePath', '', type=str)
+        if last_path and os.path.isfile(last_path):
+            self.load_save_file(last_path)
+            return
+        repository = wh.get_file_path(sys.platform)
+        latest = wh.find_latest_save(repository)
+        if latest:
+            global SAVEFILE_PATH
+            SAVEFILE_PATH = latest
+    def load_save_file(self, file_name):
+        # Load ``file_name`` into the UI and remember it for future sessions.
         global SAVEFILE_PATH, SAVE_FILE, INITIALIZATION, CACHED_SAVEFILE, ERRORS
+        SAVEFILE_PATH = file_name
         INITIALIZATION = True
-        SAVEFILE_PATH = wh.get_file_path(sys.platform)
-        options = QFileDialog.Options()
-        file_name, _ = QFileDialog.getOpenFileName(
-            self,
-            'Open',
-            SAVEFILE_PATH,
-            'Autosave (autosave_s.json);;JSON Files (*.json);;All Files (*)',
-            options=options
-        )
-
-        if file_name:
+        try:
             # reset stylesheet
             tuple(map(self.reset_stylesheet, self.findChildren(QLineEdit)))
 
@@ -287,20 +311,105 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             CACHED_SAVEFILE = SAVE_FILE
             self.initialize_values(SAVE_FILE)
             ERRORS = []
+            self.settings.setValue('lastSavePath', file_name)
+        finally:
             INITIALIZATION = False
+    def open_file_dialog(self):
+        global SAVEFILE_PATH
+        # Prefer a previously used path, then the freshest save we can find in
+        # the character repository, and finally the platform default.
+        start_path = (SAVEFILE_PATH
+                      or wh.find_latest_save(wh.get_file_path(sys.platform))
+                      or wh.get_file_path(sys.platform))
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            'Open',
+            start_path,
+            wh.SAVE_FILE_FILTER,
+            options=options
+        )
 
-    def save_file_dialog(self):
+        if file_name:
+            self.load_save_file(file_name)
+
+    def open_game_save(self):
+        # One-click shortcut: find the most recently played character save in
+        # the default Sunless Skies save folder and open it directly, no
+        # file dialog needed.
+        repository = wh.get_file_path(sys.platform)
+        if not repository or not os.path.isdir(repository):
+            QMessageBox.warning(
+                self,
+                'Save folder not found',
+                'Could not find the Sunless Skies save folder at the default location:\n'
+                + (repository or '(unknown for this platform)')
+            )
+            return
+
+        latest = wh.find_latest_save(repository)
+        if not latest:
+            QMessageBox.warning(
+                self,
+                'No save found',
+                'No save file was found in:\n' + repository
+            )
+            return
+
+        reply = QMessageBox.question(
+            self,
+            'Back up save folder?',
+            'Create a backup of the entire save folder before opening it?\n\n' + repository,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes
+        )
+        if reply == QMessageBox.Yes:
+            try:
+                backup_path = wh.backup_save_repository(repository)
+            except OSError as error:
+                QMessageBox.warning(
+                    self,
+                    'Backup failed',
+                    f'Could not create the backup:\n{error}\n\nOpening the save anyway.'
+                )
+            else:
+                QMessageBox.information(self, 'Backup created', 'Backup saved to:\n' + backup_path)
+
+        self.load_save_file(latest)
+
+    def save_current_file(self):
+        # Quick save: overwrite the currently loaded file directly, no dialog.
+        # Falls back to Save As when nothing has been loaded/saved yet.
+        if not ERRORS:
+            if SAVEFILE_PATH:
+                self.write_save_file(SAVEFILE_PATH)
+            else:
+                self.save_as_dialog()
+
+    def save_as_dialog(self):
+        global SAVEFILE_PATH
         if not ERRORS:
             options = QFileDialog.Options()
+            start_path = SAVEFILE_PATH or wh.get_file_path(sys.platform)
             file_name, _ = QFileDialog.getSaveFileName(
                 self,
-                'Save',
-                SAVEFILE_PATH,
-                'Autosave (autosave_s.json);;JSON Files (*.json);;All Files (*)',
+                'Save As',
+                start_path,
+                wh.SAVE_FILE_FILTER,
                 options=options
             )
             if file_name:
-                jh.save_json_file(file_name, SAVE_FILE)
+                SAVEFILE_PATH = file_name
+                self.write_save_file(file_name)
+
+    def write_save_file(self, file_name):
+        jh.save_json_file(file_name, SAVE_FILE)
+        self.settings.setValue('lastSavePath', file_name)
+        self.show_saved_indicator()
+
+    def show_saved_indicator(self):
+        self.ui.label_SaveStatus.setText('Saved')
+        QTimer.singleShot(1500, lambda: self.ui.label_SaveStatus.setText(''))
 
     def set_style(self, sender, is_valid):
         if type(sender) is QLineEdit:
@@ -434,6 +543,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ui.checkBox_Poss_Heirloom_Wealth.setChecked(jh.get_heirloom(save_file, 137376))
         self.ui.checkBox_Poss_Heirloom_Cup.setChecked(jh.get_heirloom(save_file, 139484))
         self.ui.checkBox_Poss_Heirloom_Secret.setChecked(jh.get_heirloom(save_file, 139160))
+        # Soul Flaws
+        self.ui.checkBox_Poss_SoulFlaw_Flickering.setChecked(jh.get_soul_flaw(save_file, 133340))
+        self.ui.checkBox_Poss_SoulFlaw_Clear.setChecked(jh.get_soul_flaw(save_file, 133341))
+        self.ui.checkBox_Poss_SoulFlaw_Curdled.setChecked(jh.get_soul_flaw(save_file, 133342))
+        self.ui.checkBox_Poss_SoulFlaw_Stained.setChecked(jh.get_soul_flaw(save_file, 133345))
+        self.ui.checkBox_Poss_SoulFlaw_Fermented.setChecked(jh.get_soul_flaw(save_file, 133346))
+        self.ui.checkBox_Poss_SoulFlaw_Cold.setChecked(jh.get_soul_flaw(save_file, 133347))
+        self.ui.checkBox_Poss_SoulFlaw_Lightless.setChecked(jh.get_soul_flaw(save_file, 133348))
         # Reach
         self.ui.lineEdit_Poss_ReachMisc_Circus.setText(jh.get_quality_value(save_file, 137036))
         self.ui.lineEdit_Poss_ReachMisc_StovepipePlate.setText(jh.get_quality_value(save_file, 133455))
@@ -590,6 +707,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not INITIALIZATION:
             global SAVE_FILE
             jh.write_heirlooms(SAVE_FILE, self.sender().isChecked(), val_id)
+
+    def update_soul_flaw(self, val_id):
+        if not INITIALIZATION:
+            global SAVE_FILE
+            jh.write_soul_flaw(SAVE_FILE, self.sender().isChecked(), val_id)
 
     def generate_port_list(self):
         region = self.sender().currentText()

@@ -1,0 +1,8 @@
+# Development / build dependencies for Sunless Skies Save Editor.
+# Install with:  pip install -r requirements-dev.txt
+# Runtime dependencies live in requirements.txt.
+
+-r requirements.txt
+
+# Packaging into a standalone executable (see README "Building an executable").
+pyinstaller>=6.0

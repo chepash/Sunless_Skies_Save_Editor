@@ -45,6 +45,8 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+#  ...but keep our hand-written build recipe under version control.
+!sunless_skies_editor.spec
 
 # Installer logs
 pip-log.txt
