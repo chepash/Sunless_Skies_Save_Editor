@@ -276,6 +276,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ui.pushButton_Bank_Remove.clicked.connect(lambda: self.remove_cargo())
         self.ui.tableWidget_Bank.itemChanged.connect(lambda: self.update_cargo())
 
+        # Cargo Hold (cargo currently loaded on the ship, separate from the Bank)
+        self.ui.tableWidget_CargoHold.itemSelectionChanged.connect(lambda: self.ui.pushButton_CargoHold_Remove.setEnabled(True))
+        self.ui.pushButton_CargoHold_Add.clicked.connect(lambda: self.add_hold_cargo())
+        self.ui.pushButton_CargoHold_Remove.clicked.connect(lambda: self.remove_hold_cargo())
+        self.ui.tableWidget_CargoHold.itemChanged.connect(lambda: self.update_hold_cargo())
+
         # Remember the last opened/saved file between sessions.
         QCoreApplication.setOrganizationName('SunlessSkiesSaveEditor')
         QCoreApplication.setApplicationName('SunlessSkiesSaveEditor')
@@ -431,6 +437,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.append_map(save_file)
         self.append_possessions(save_file)
         self.append_bank(save_file)
+        self.append_hold_cargo(save_file)
 
     def reset_stylesheet(self, element):
         element.setProperty('valid', True)
@@ -596,6 +603,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.ui.tableWidget_Bank.setItem(index, 0, cargo_name)
             self.ui.tableWidget_Bank.setItem(index, 1, cargo_amount)
 
+    def append_hold_cargo(self, save_file):
+        held_cargo = jh.get_hold_cargo(save_file)
+        self.ui.pushButton_CargoHold_Add.setEnabled(True)
+        self.ui.tableWidget_CargoHold.setRowCount(len(held_cargo))
+        for index, cargo_id in enumerate(held_cargo):
+            name, amount = jh.get_hold_item(save_file, cargo_id)
+
+            cargo_name = QTableWidgetItem()
+            cargo_name.setText(name)
+            cargo_name.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            cargo_amount = QTableWidgetItem()
+            cargo_amount.setText(amount)
+
+            self.ui.tableWidget_CargoHold.setItem(index, 0, cargo_name)
+            self.ui.tableWidget_CargoHold.setItem(index, 1, cargo_amount)
+
     def record_errors(self, sender, state):
         global ERRORS
         if state:
@@ -752,13 +775,71 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def update_cargo(self):
         if not INITIALIZATION and not ADDING_CARGO:
             global SAVE_FILE
-            row = self.sender().currentRow()
-            
-            cargo_name = self.sender().item(row, 0).text()
-            if self.validated(self.sender().item(row, 1)):
-                cargo = [jh.get_cargo_id(cargo_name), self.sender().item(row, 1).text()]
+            table = self.sender()
+            row = table.currentRow()
+
+            cargo_name = table.item(row, 0).text()
+            if table.item(row, 1).text() == '0':
+                # Typing 0 removes the cargo, same as the "-" button.
+                cargo_id = jh.get_cargo_id(cargo_name)
+                jh.remove_cargo(SAVE_FILE, cargo_id)
+                table.removeRow(row)
+                return
+
+            if self.validated(table.item(row, 1)):
+                cargo = [jh.get_cargo_id(cargo_name), table.item(row, 1).text()]
 
                 jh.write_cargo(SAVE_FILE, cargo)
+
+    def add_hold_cargo(self):
+        global SAVE_FILE, ADDING_CARGO
+        dialog = CargoDialog(mode='hold')
+        if dialog.exec_() == QDialog.Accepted:
+            ADDING_CARGO = True
+            rows = self.ui.tableWidget_CargoHold.rowCount()
+
+            cargo_name = QTableWidgetItem()
+            cargo_name.setText(CARGO_IDS.get(dialog.cargo[0], dialog.cargo[0]))
+            cargo_name.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            cargo_amount = QTableWidgetItem()
+            cargo_amount.setText(dialog.cargo[1])
+
+            self.ui.tableWidget_CargoHold.insertRow(rows)
+            self.ui.tableWidget_CargoHold.setItem(rows, 0, cargo_name)
+            self.ui.tableWidget_CargoHold.setItem(rows, 1, cargo_amount)
+
+            jh.write_hold_cargo(SAVE_FILE, dialog.cargo)
+            ADDING_CARGO = False
+
+        dialog.deleteLater()
+
+    def remove_hold_cargo(self):
+        global SAVE_FILE
+        row = self.ui.tableWidget_CargoHold.currentRow()
+        cargo_name = self.ui.tableWidget_CargoHold.item(row, 0).text()
+        cargo_id = jh.get_cargo_id(cargo_name)
+        jh.remove_hold_cargo(SAVE_FILE, cargo_id)
+        self.ui.tableWidget_CargoHold.removeRow(row)
+        self.ui.tableWidget_CargoHold.setCurrentCell(row-1, 0)
+
+    def update_hold_cargo(self):
+        if not INITIALIZATION and not ADDING_CARGO:
+            global SAVE_FILE
+            table = self.sender()
+            row = table.currentRow()
+
+            cargo_name = table.item(row, 0).text()
+            if table.item(row, 1).text() == '0':
+                # Typing 0 removes the cargo, same as the "-" button.
+                cargo_id = jh.get_cargo_id(cargo_name)
+                jh.remove_hold_cargo(SAVE_FILE, cargo_id)
+                table.removeRow(row)
+                return
+
+            if self.validated(table.item(row, 1)):
+                cargo = [jh.get_cargo_id(cargo_name), table.item(row, 1).text()]
+
+                jh.write_hold_cargo(SAVE_FILE, cargo)
 
 
 class AboutWindow(QDialog, Ui_AboutDialog):
@@ -777,7 +858,7 @@ class AboutWindow(QDialog, Ui_AboutDialog):
 
 
 class CargoDialog(QDialog, Ui_CargoDialog):
-    def __init__(self):
+    def __init__(self, mode='bank'):
         global POSSIBLE_CARGO
         super(QDialog, self).__init__()
 
@@ -786,8 +867,12 @@ class CargoDialog(QDialog, Ui_CargoDialog):
 
         self.cargo = ['key', 'value']
 
-        # Generate list of possilbe cargo from known IDs
-        POSSIBLE_CARGO = jh.get_possible_cargo(SAVE_FILE)
+        # Generate list of possible cargo from known IDs, excluding whatever
+        # is already present in the target (bank stash or ship's hold).
+        if mode == 'hold':
+            POSSIBLE_CARGO = jh.get_possible_hold_cargo(SAVE_FILE)
+        else:
+            POSSIBLE_CARGO = jh.get_possible_cargo(SAVE_FILE)
         self.ui.listWidget_Cargo.addItems(jh.get_cargo_list(POSSIBLE_CARGO))
 
         # Item selection handling

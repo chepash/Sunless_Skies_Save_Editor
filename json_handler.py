@@ -395,3 +395,37 @@ def remove_cargo(save_file, cargo_id):
     del save_file['SavedBankItems'][cargo_id]
     return save_file
 
+
+def get_hold_cargo(save_file):
+    # Cargo currently loaded on the ship. Unlike the bank (a dedicated
+    # SavedBankItems dict), this lives in the same QualitiesPossessedList as
+    # every other stat, so it has to be picked out by matching known cargo
+    # IDs rather than read from a container of its own.
+    held = {}
+    for quality in save_file['QualitiesPossessedList']:
+        cargo_id = str(quality['AssociatedQuality']['Id'])
+        level = quality.get('Level', 0)
+        if cargo_id in CARGO_IDS and level:
+            held[cargo_id] = level
+    return held
+
+
+def get_hold_item(save_file, cargo_id):
+    name = CARGO_IDS.get(cargo_id, cargo_id)
+    amount = str(get_hold_cargo(save_file).get(cargo_id, 0))
+    return name, amount
+
+
+def get_possible_hold_cargo(save_file):
+    held = get_hold_cargo(save_file)
+    return {cargo_id: name for cargo_id, name in CARGO_IDS.items() if cargo_id not in held}
+
+
+def write_hold_cargo(save_file, cargo):
+    cargo_id, amount = cargo
+    return write_possessions(save_file, amount, int(cargo_id))
+
+
+def remove_hold_cargo(save_file, cargo_id):
+    return write_possessions(save_file, 0, int(cargo_id))
+

@@ -2101,7 +2101,91 @@ background: transparent;
         <item>
          <widget class="QLabel" name="label_89">
           <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Zero values not allowed. Delete the cargo if you need to remove something from the bank.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If an ID is unknown (such as from a DLC), it'll be present in the list with the ID as it's name. I will try to add all new IDs when DLCs get released as fast as possible.&lt;/p&gt;&lt;p&gt;In the meantime, adding unknown IDs (such as from a DLC) is possible. Verify that the ID can be stored in the Bank, though.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Setting the amount to 0 removes the cargo&lt;/span&gt; from the bank, same as the &amp;quot;-&amp;quot; button.&lt;/p&gt;&lt;p&gt;If an ID is unknown (such as from a DLC), it'll be present in the list with the ID as it's name. I will try to add all new IDs when DLCs get released as fast as possible.&lt;/p&gt;&lt;p&gt;In the meantime, adding unknown IDs (such as from a DLC) is possible. Verify that the ID can be stored in the Bank, though.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_4">
+       <attribute name="title">
+        <string>Cargo Hold</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_6">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_6">
+          <item>
+           <widget class="QTableWidget" name="tableWidget_CargoHold">
+            <column>
+             <property name="text">
+              <string>Cargo</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Amount</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_7">
+            <item>
+             <widget class="QPushButton" name="pushButton_CargoHold_Add">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>50</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>+</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_CargoHold_Remove">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>50</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>-</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_6">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_90">
+          <property name="text">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;This is the cargo currently loaded on your ship&lt;/span&gt; (what you see in the in-game Cargo Hold), separate from the Bank above.&lt;/p&gt;&lt;p&gt;Setting the amount to 0 removes the cargo, same as the &amp;quot;-&amp;quot; button.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="wordWrap">
            <bool>true</bool>
